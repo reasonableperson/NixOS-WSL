@@ -85,6 +85,7 @@
           options-doc = pkgs.callPackage ./checks/options-doc.nix args;
           rustfmt = pkgs.callPackage ./checks/rustfmt.nix args;
           side-effects = pkgs.callPackage ./checks/side-effects.nix args;
+          ssh-agent = pkgs.callPackage ./checks/ssh-agent.nix args;
           username = pkgs.callPackage ./checks/username.nix args;
           test-native-utils = self.packages.${pkgs.stdenv.hostPlatform.system}.utils;
         }
