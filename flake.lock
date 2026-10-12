@@ -35,7 +35,25 @@
     "root": {
       "inputs": {
         "flake-compat": "flake-compat",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "wsl2-npipe-bridge": "wsl2-npipe-bridge"
+      }
+    },
+    "wsl2-npipe-bridge": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791771108,
+        "narHash": "sha256-vCAN/QCOtF7j6WLiT9/W4tAlUdQQSJlUq3ZpGI7W1Lc=",
+        "path": "/home/s/git/wsl2-npipe-bridge",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/s/git/wsl2-npipe-bridge",
+        "type": "path"
       }
     }
   },

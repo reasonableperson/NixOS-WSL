@@ -1,21 +1,10 @@
 { config
 , lib
-, pkgs
 , ...
 }:
 
 let
   cfg = config.wsl.ssh-agent;
-  encodedRelay = pkgs.runCommand "wsl-ssh-agent-encoded"
-    {
-      nativeBuildInputs = [ pkgs.coreutils pkgs.glibc.bin ];
-    } ''
-    iconv -f UTF-8 -t UTF-16LE ${./ssh-agent.ps1} | base64 -w0 > $out
-  '';
-  relay = pkgs.writeShellScript "wsl-ssh-agent" ''
-    exec ${lib.escapeShellArg cfg.powershellPath} -NoLogo -NoProfile -NonInteractive \
-      -EncodedCommand "$( ${pkgs.coreutils}/bin/cat ${encodedRelay} )"
-  '';
 in
 {
   imports = [
@@ -47,38 +36,9 @@ in
   };
 
   config = lib.mkIf (config.wsl.enable && cfg.enable) {
-    assertions = [
-      {
-        assertion = builtins.isList cfg.users -> lib.all (u: lib.hasAttr u config.users.users) cfg.users;
-        message = ''
-          wsl.ssh-agent.users contains users that do not exist in users.users:
-          ${lib.concatStringsSep ", " (lib.filter (u: !lib.hasAttr u config.users.users) cfg.users)}
-        '';
-      }
-    ];
-
-    systemd.user.sockets.wsl2-ssh-agent = {
-      description = "Windows SSH agent socket";
-      wantedBy = [ "sockets.target" ];
-      unitConfig.ConditionUser = lib.join "|" (lib.toList cfg.users);
-      socketConfig = {
-        ListenStream = "%t/wsl2-ssh-agent.sock";
-        SocketMode = "0600";
-        Accept = true;
-        RemoveOnStop = true;
-      };
+    services.wsl2-ssh-agent = {
+      enable = true;
+      inherit (cfg) users powershellPath;
     };
-
-    systemd.user.services."wsl2-ssh-agent@" = {
-      description = "Windows SSH agent connection";
-      serviceConfig = {
-        ExecStart = relay;
-        StandardInput = "socket";
-        StandardOutput = "socket";
-        StandardError = "journal";
-      };
-    };
-
-    environment.variables.SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/wsl2-ssh-agent.sock";
   };
 }

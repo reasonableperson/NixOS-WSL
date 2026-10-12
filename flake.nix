@@ -4,6 +4,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    wsl2-npipe-bridge = {
+      # Local checkout until the bridge has a published repository URL.
+      url = "path:/home/s/git/wsl2-npipe-bridge";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -26,6 +32,7 @@
       nixosModules.wsl = {
         imports = [
           ./modules
+          inputs.wsl2-npipe-bridge.nixosModules.default
 
           (_: {
             wsl.version.rev = lib.mkIf (self ? rev) self.rev;
@@ -85,7 +92,7 @@
           options-doc = pkgs.callPackage ./checks/options-doc.nix args;
           rustfmt = pkgs.callPackage ./checks/rustfmt.nix args;
           side-effects = pkgs.callPackage ./checks/side-effects.nix args;
-          ssh-agent = pkgs.callPackage ./checks/ssh-agent.nix args;
+          ssh-agent = inputs.wsl2-npipe-bridge.checks.${pkgs.stdenv.hostPlatform.system}.ssh-agent;
           username = pkgs.callPackage ./checks/username.nix args;
           test-native-utils = self.packages.${pkgs.stdenv.hostPlatform.system}.utils;
         }
@@ -106,7 +113,6 @@
             clippy
             mdbook
             nixpkgs-fmt
-            powershell
             rustc
             rustfmt
             shfmt
