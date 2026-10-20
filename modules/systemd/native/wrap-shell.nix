@@ -15,18 +15,30 @@ let
       '';
     };
 
+  wrappedConfig = recursiveUpdate config {
+    users.users = mapAttrs
+      (n: v: v // {
+        shell = (wrapShell (utils.toShellPath v.shell)).outPath + "/wrapper";
+      })
+      config.users.users;
+  };
+
   users-groups-module = import "${modulesPath}/config/users-groups.nix" {
     inherit lib utils pkgs;
-    config = recursiveUpdate config {
-      users.users = mapAttrs
-        (n: v: v // {
-          shell = (wrapShell (utils.toShellPath v.shell)).outPath + "/wrapper";
-        })
-        config.users.users;
-    };
+    config = wrappedConfig;
   };
 in
 {
+  # Userborn reads users directly rather than using the users activation script.
+  disabledModules = [ "services/system/userborn.nix" ];
+
+  imports = [
+    ({ ... }: import "${modulesPath}/services/system/userborn.nix" {
+      inherit lib utils pkgs;
+      config = if cfg.enable then wrappedConfig else config;
+    })
+  ];
+
   options.wsl.wrapBinSh = mkOption {
     type = types.bool;
     default = true;
