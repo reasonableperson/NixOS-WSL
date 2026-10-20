@@ -87,6 +87,7 @@
           args = { inherit inputs; };
         in
         {
+          interop = pkgs.callPackage ./checks/interop.nix args;
           nixpkgs-fmt = pkgs.callPackage ./checks/nixpkgs-fmt.nix args;
           nixpkgs-input = pkgs.callPackage ./checks/nixpkgs-input.nix args;
           options-doc = pkgs.callPackage ./checks/options-doc.nix args;
