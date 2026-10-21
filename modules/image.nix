@@ -2,6 +2,7 @@
 with builtins; with lib;
 let
   cfg = config.wsl.tarball;
+  defaultUser = config.users.users.${config.wsl.defaultUser};
 
   icon = ../assets/NixOS-WSL.ico;
   iconPath = "/etc/nixos.ico";
@@ -60,6 +61,10 @@ in
 
   image.fileName = mkDefault "nixos.${pkgs.stdenv.hostPlatform.parsed.cpu.name}.wsl";
   system.build.image =
+    assert lib.assertMsg
+      (defaultUser.enable && defaultUser.uid != null
+        && config.users.groups.${defaultUser.group}.gid != null)
+      "Building a WSL image requires wsl.defaultUser to be enabled with an explicit UID and primary group GID";
     (pkgs.callPackage (modulesPath + "/../lib/make-system-tarball.nix") {
       compressionExtension = ".gz";
       compressCommand = pkgs.writeShellScript "compress-wsl-tarball" ''
@@ -80,63 +85,60 @@ in
         { source = config.system.build.toplevel + "/etc/os-release"; target = "/etc/os-release"; }
       ];
 
-      extraCommands = pkgs.writeShellScript "prepare-wsl-tarball" ''
-        set -e
-        echo "[NixOS-WSL] Preparing bootstrap files and users..."
-        mkdir -p bin sbin dev proc sys run tmp root etc/nixos nix/var/nix/gcroots
-        chmod 1777 tmp
-        chmod 0700 root
-        ln -s ${config.system.build.nativeUtils}/bin/systemd-shim sbin/init
-        ln -s ${config.wsl.binShExe} bin/sh
-        ${concatMapStrings (entry:
-          optionalString (config.wsl.populateBin && entry.name != "sh") (
-            if entry.copy
-            then "cp ${escapeShellArg entry.src} ${escapeShellArg "bin/${entry.name}"}\n"
-            else "ln -s ${escapeShellArg entry.src} ${escapeShellArg "bin/${entry.name}"}\n"
-          )
-        ) config.wsl.extraBin}
-        ln -s system-1-link nix/var/nix/profiles/system
-        ln -s /nix/var/nix/profiles/system nix/var/nix/gcroots/system
+      extraCommands =
+        let
+          imageUsers = [ config.users.users.root config.users.users.${config.wsl.defaultUser} ];
+        in
+        pkgs.writeShellScript "prepare-wsl-tarball" ''
+          set -e
+          echo "[NixOS-WSL] Preparing bootstrap files and users..."
+          mkdir -p bin sbin dev proc sys run tmp root etc/nixos nix/var/nix/gcroots
+          chmod 1777 tmp
+          chmod 0700 root
+          ln -s ${config.system.build.nativeUtils}/bin/systemd-shim sbin/init
+          ln -s ${config.wsl.binShExe} bin/sh
+          ${concatMapStrings (entry:
+            optionalString (config.wsl.populateBin && entry.name != "sh") (
+              if entry.copy
+              then "cp ${escapeShellArg entry.src} ${escapeShellArg "bin/${entry.name}"}\n"
+              else "ln -s ${escapeShellArg entry.src} ${escapeShellArg "bin/${entry.name}"}\n"
+            )
+          ) config.wsl.extraBin}
+          ln -s system-1-link nix/var/nix/profiles/system
+          ln -s /nix/var/nix/profiles/system nix/var/nix/gcroots/system
 
-        # Generate /etc/passwd and /etc/group at build time so WSL can resolve
-        # users without waiting for activation to apply passwords and wrapped shells.
-        bootstrapUsers="$(mktemp -d)"
-        ${pkgs.buildPackages.userborn}/bin/userborn ${pkgs.writeText "bootstrap-users.json" (toJSON {
-          users = mapAttrsToList (_: user: {
-            inherit (user) name uid group description home;
-            isNormal = user.isNormalUser;
-            shell = utils.toShellPath user.shell;
-          }) (filterAttrs (_: user: user.enable) config.users.users);
-          groups = mapAttrsToList (_: group: {
-            inherit (group) name gid members;
-          }) config.users.groups;
-        })} "$bootstrapUsers"
-        mv "$bootstrapUsers/passwd" etc/passwd
-        mv "$bootstrapUsers/group" etc/group
-        rm -r "$bootstrapUsers"
-        chmod 0644 etc/passwd etc/group
+          # WSL resolves the default user before starting /sbin/init.
+          # Seed root and the default user; activation configures the remaining users.
+          cp ${pkgs.writeText "bootstrap-passwd" (concatMapStrings (user:
+            "${user.name}:x:${toString user.uid}:${toString config.users.groups.${user.group}.gid}:${user.description}:${user.home}:${utils.toShellPath user.shell}\n"
+          ) imageUsers)} etc/passwd
+          cp ${pkgs.writeText "bootstrap-group" (concatMapStrings (name:
+            let group = config.users.groups.${name}; in
+            "${group.name}:x:${toString group.gid}:${concatStringsSep "," (intersectLists (map (user: user.name) imageUsers) group.members)}\n"
+          ) (unique (map (user: user.group) imageUsers)))} etc/group
+          chmod 0644 etc/passwd etc/group
 
-        # The WSL shim bypasses stage 2, which normally loads nix-path-registration.
-        echo "[NixOS-WSL] Initializing the Nix database..."
-        NIX_STATE_DIR="$PWD/nix/var/nix" ${config.nix.package}/bin/nix-store --load-db < nix-path-registration
-        rm nix-path-registration
+          # The WSL shim bypasses stage 2, which normally loads nix-path-registration.
+          echo "[NixOS-WSL] Initializing the Nix database..."
+          NIX_STATE_DIR="$PWD/nix/var/nix" ${config.nix.package}/bin/nix-store --load-db < nix-path-registration
+          rm nix-path-registration
 
-        ${optionalString config.nix.channel.enable ''
-          mkdir -p root/.nix-defexpr
-          ln -s /nix/var/nix/profiles/per-user/root/channels root/.nix-defexpr/channels
-          printf '%s\n' \
-            '${config.system.defaultChannel} nixos' \
-            'https://github.com/nix-community/NixOS-WSL/archive/refs/heads/${nixosWslBranch}.tar.gz nixos-wsl' \
-            > root/.nix-channels
-        ''}
+          ${optionalString config.nix.channel.enable ''
+            mkdir -p root/.nix-defexpr
+            ln -s /nix/var/nix/profiles/per-user/root/channels root/.nix-defexpr/channels
+            printf '%s\n' \
+              '${config.system.defaultChannel} nixos' \
+              'https://github.com/nix-community/NixOS-WSL/archive/refs/heads/${nixosWslBranch}.tar.gz nixos-wsl' \
+              > root/.nix-channels
+          ''}
 
-        ${if cfg.configPath == null then ''
-          cp ${defaultConfig} etc/nixos/configuration.nix
-        '' else ''
-          cp -R ${lib.cleanSource cfg.configPath}/. etc/nixos
-        ''}
-        chmod -R u+w etc/nixos
-      '';
+          ${if cfg.configPath == null then ''
+            cp ${defaultConfig} etc/nixos/configuration.nix
+          '' else ''
+            cp -R ${lib.cleanSource cfg.configPath}/. etc/nixos
+          ''}
+          chmod -R u+w etc/nixos
+        '';
     }).overrideAttrs (old: {
       buildCommandPath = pkgs.writeText "build-wsl-image.sh" ''
         echo "[NixOS-WSL] Staging filesystem and system closure ($(wc -l < "$closureInfo/store-paths") store paths)..."
