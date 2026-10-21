@@ -6,6 +6,20 @@ let
   icon = ../assets/NixOS-WSL.ico;
   iconPath = "/etc/nixos.ico";
 
+  bootstrapUsers = pkgs.runCommand "wsl-bootstrap-users" { } ''
+    mkdir -p $out
+    ${pkgs.buildPackages.userborn}/bin/userborn ${pkgs.writeText "bootstrap-users.json" (toJSON {
+      users = mapAttrsToList (_: user: {
+        inherit (user) name uid group description home;
+        isNormal = user.isNormalUser;
+        shell = utils.toShellPath user.shell;
+      }) (filterAttrs (_: user: user.enable) config.users.users);
+      groups = mapAttrsToList (_: group: {
+        inherit (group) name gid members;
+      }) config.users.groups;
+    })} $out
+  '';
+
   wsl-distribution-conf = pkgs.writeText "wsl-distribution.conf" (
     generators.toINI { } {
       oobe.defaultName = "NixOS";
@@ -60,10 +74,6 @@ in
 
   image.fileName = mkDefault "nixos.${pkgs.stdenv.hostPlatform.parsed.cpu.name}.wsl";
   system.build.image =
-    assert lib.assertMsg
-      (config.users.users.${config.wsl.defaultUser}.uid != null
-        && config.users.groups.${config.users.users.${config.wsl.defaultUser}.group}.gid != null)
-      "The sandboxed WSL tarball requires a fixed UID and primary GID for wsl.defaultUser";
     (pkgs.callPackage (modulesPath + "/../lib/make-system-tarball.nix") {
       compressionExtension = ".gz";
       compressCommand = pkgs.writeShellScript "compress-wsl-tarball" ''
@@ -103,16 +113,10 @@ in
         ln -s system-1-link nix/var/nix/profiles/system
         ln -s /nix/var/nix/profiles/system nix/var/nix/gcroots/system
 
-        # WSL resolves users before the shim runs activation. Seed fixed-ID users;
-        # activation creates the remaining users and applies passwords and shells.
-        cp ${pkgs.writeText "bootstrap-passwd" (concatMapStrings (user:
-          optionalString (user.uid != null && config.users.groups.${user.group}.gid != null)
-            "${user.name}:x:${toString user.uid}:${toString config.users.groups.${user.group}.gid}:${user.description}:${user.home}:${utils.toShellPath user.shell}\n"
-        ) (attrValues config.users.users))} etc/passwd
-        cp ${pkgs.writeText "bootstrap-group" (concatMapStrings (group:
-          optionalString (group.gid != null)
-            "${group.name}:x:${toString group.gid}:${concatStringsSep "," group.members}\n"
-        ) (attrValues config.users.groups))} etc/group
+        # WSL resolves users before the shim runs activation. Allocate IDs now;
+        # activation preserves them and applies passwords and wrapped shells.
+        cp ${bootstrapUsers}/passwd etc/passwd
+        cp ${bootstrapUsers}/group etc/group
         chmod 0644 etc/passwd etc/group
 
         # The WSL shim bypasses stage 2, which normally loads nix-path-registration.

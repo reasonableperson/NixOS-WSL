@@ -9,8 +9,28 @@ let
   configuration = inputs.self.nixosConfigurations.${system};
   image = (configuration.extendModules {
     modules = [{
-      image.modules.wsl = {
+      image.modules.wsl = { config, lib, ... }: {
         image.fileName = "test-wsl.wsl";
+        users.users.${config.wsl.defaultUser} = {
+          uid = lib.mkForce null;
+          group = "bootstrap";
+        };
+        users.groups.bootstrap = { };
+        users.users.reserved = {
+          isNormalUser = true;
+          uid = 1000;
+          group = "reserved";
+        };
+        users.groups.reserved.gid = 400;
+        users.users.bootstrap-system = {
+          isSystemUser = true;
+          group = "bootstrap";
+        };
+        users.users.disabled = {
+          enable = false;
+          isSystemUser = true;
+          group = "bootstrap";
+        };
       };
     }];
   }).config.system.build.images.wsl;
@@ -61,7 +81,17 @@ runCommand "check-wsl-tarball" { nativeBuildInputs = [ python3 ]; } ''
   assert b"nixos-wsl" in files["root/.nix-channels"]
   users = {line.split(":")[0]: line.split(":") for line in files["etc/passwd"].decode().splitlines()}
   assert users["root"][2:4] == ["0", "0"]
-  assert users["${config.users.users.${config.wsl.defaultUser}.name}"][2] == "${toString config.users.users.${config.wsl.defaultUser}.uid}"
+  groups = {line.split(":")[0]: line.split(":") for line in files["etc/group"].decode().splitlines()}
+  default_user = users["${config.users.users.${config.wsl.defaultUser}.name}"]
+  assert 1000 < int(default_user[2]) < 30000
+  assert default_user[3] == groups["bootstrap"][2]
+  assert 400 < int(groups["bootstrap"][2]) < 1000
+  assert users["reserved"][2:4] == ["1000", "400"]
+  assert 400 <= int(users["bootstrap-system"][2]) < 1000
+  assert users["bootstrap-system"][3] == groups["bootstrap"][2]
+  assert "disabled" not in users
+  assert len({user[2] for user in users.values()}) == len(users)
+  assert len({group[2] for group in groups.values()}) == len(groups)
 
   pathlib.Path("db.sqlite").write_bytes(files["nix/var/nix/db/db.sqlite"])
   with sqlite3.connect("db.sqlite") as db:
