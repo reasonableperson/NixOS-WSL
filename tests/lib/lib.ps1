@@ -54,7 +54,8 @@ class Distro {
 
   [string]FindTarball() {
     # Check if a fresh tarball exists in result, otherwise try one in the current directory
-    $tarball = "./nixos.wsl"
+    $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "aarch64" } else { "x86_64" }
+    $tarball = "./nixos.$arch.wsl"
     if (!(Test-Path $tarball)) {
       throw "Could not find the tarball! Run nix build first, or place one in the current directory."
     }

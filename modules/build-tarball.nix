@@ -58,7 +58,7 @@ in
 
   wsl.enable = true;
 
-  image.fileName = mkDefault "nixos.wsl";
+  image.fileName = mkDefault "nixos.${pkgs.stdenv.hostPlatform.parsed.cpu.name}.wsl";
   system.build.image =
     assert lib.assertMsg
       (config.users.users.${config.wsl.defaultUser}.uid != null

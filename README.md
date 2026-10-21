@@ -18,7 +18,7 @@ Run the following from powershell:
     wsl --install --no-distribution
     ```
 
-2. Download `nixos.wsl` from [the latest release](https://github.com/nix-community/NixOS-WSL/releases/latest).
+2. Download `nixos.x86_64.wsl` (or `nixos.aarch64.wsl` for ARM64) from [the latest release](https://github.com/nix-community/NixOS-WSL/releases/latest).
 
 3. Double-click the file you just downloaded (requires WSL >= 2.4.4)
 

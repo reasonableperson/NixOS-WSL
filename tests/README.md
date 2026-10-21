@@ -13,9 +13,9 @@ Please note that the tests are not compatible with Windows PowerShell, but requi
 ### Running the Tests
 
 If you haven't already, [install Pester](https://pester.dev/docs/introduction/installation/).  
-The tests require a "default" `nixos.wsl` to be present in the current working directory, which can be built with
+The tests require a "default" `nixos.x86_64.wsl` to be present in the current working directory, which can be built with
 `nix build .#nixosConfigurations.x86_64-linux.config.system.build.images.wsl`, followed by
-`cp result/nixos.wsl nixos.wsl`. Use `aarch64-linux` instead of `x86_64-linux` on ARM.
+`cp result/nixos.x86_64.wsl nixos.x86_64.wsl`. Use `aarch64-linux` instead of `x86_64-linux` and `nixos.aarch64.wsl` instead of `nixos.x86_64.wsl` on ARM.
 
 Once everything is in place, run the test by running the following in PowerShell at the root of this repo:
 

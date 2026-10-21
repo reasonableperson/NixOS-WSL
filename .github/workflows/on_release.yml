@@ -25,22 +25,18 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: tarball-aarch64
-          path: aarch64
-
-      - name: Rename aarch64 Tarball 📦
-        run: mv aarch64/nixos.wsl nixos.aarch64.wsl
 
       - name: Generate Checksums 🔑
         run: |
-          sha256sum nixos.wsl > nixos.wsl.sha256
+          sha256sum nixos.x86_64.wsl > nixos.x86_64.wsl.sha256
           sha256sum nixos.aarch64.wsl > nixos.aarch64.wsl.sha256
 
       - name: Attach to Release 📎
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
-            nixos.wsl
-            nixos.wsl.sha256
+            nixos.x86_64.wsl
+            nixos.x86_64.wsl.sha256
             nixos.aarch64.wsl
             nixos.aarch64.wsl.sha256
         env:

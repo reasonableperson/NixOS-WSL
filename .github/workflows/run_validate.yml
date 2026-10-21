@@ -34,4 +34,4 @@ jobs:
       - name: Validate Tarball 🩺
         shell: bash
         run: |
-          python3 distributions/validate-modern.py --tar nixos.wsl
+          python3 distributions/validate-modern.py --tar nixos.${{ matrix.system }}.wsl

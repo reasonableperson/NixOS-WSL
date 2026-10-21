@@ -12,7 +12,7 @@ nixos-rebuild build-image --flake .#aarch64-linux --image-variant wsl -L
 
 `-L` streams build logs, including staging, database initialization, and compression progress messages.
 Use `x86_64-linux` instead of `aarch64-linux` for x86_64, or your own configuration name.
-The image is at `result/nixos.wsl` by default.
+The image is at `result/nixos.aarch64.wsl` (or `result/nixos.x86_64.wsl` for x86_64) by default.
 You can also build it directly:
 
 ```sh

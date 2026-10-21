@@ -7,16 +7,16 @@ Support for older "inbox" versions is best-effort.
 
 ## Install NixOS-WSL
 
-First, download `nixos.wsl` from [the latest release](https://github.com/nix-community/NixOS-WSL/releases/latest).[^wsl-file]
+First, download `nixos.x86_64.wsl` (or `nixos.aarch64.wsl` for ARM64) from [the latest release](https://github.com/nix-community/NixOS-WSL/releases/latest).[^wsl-file]
 
 If you have WSL version 2.4.4 or later installed, you can open (double-click) the .wsl file to install it.
 It is also possible to perform the installation from a PowerShell:
 
 ```powershell
-wsl --install --from-file nixos.wsl
+wsl --install --from-file nixos.x86_64.wsl
 ```
 
-`nixos.wsl` must be the path to the file you just downloaded if you're running the command in another directory.
+`nixos.x86_64.wsl` must be the path to the file you just downloaded if you're running the command in another directory.
 
 You can use the `--name` and `--location` flags to change the name the distro is registered under (default: `NixOS`) and the location of the disk image (default: `%localappdata%\wsl\{some random GUID}`). For a full list of options, refer to `wsl --help`
 
@@ -29,17 +29,17 @@ If you have a WSL version older than 2.4.4, you can install NixOS-WSL like this:
 Open up a PowerShell and run:
 
 ```powershell
-wsl --import NixOS $env:USERPROFILE\NixOS nixos.wsl --version 2
+wsl --import NixOS $env:USERPROFILE\NixOS nixos.x86_64.wsl --version 2
 ```
 
 Or for Command Prompt:
 
 ```cmd
-wsl --import NixOS %USERPROFILE%\NixOS nixos.wsl --version 2
+wsl --import NixOS %USERPROFILE%\NixOS nixos.x86_64.wsl --version 2
 ```
 
 This sets up a new WSL distribution `NixOS` that is installed in a directory called `NixOS` inside your user directory.
-`nixos.wsl` is the path to the file you downloaded earlier.
+`nixos.x86_64.wsl` is the path to the file you downloaded earlier.
 You can adjust the installation path and distribution name to your liking.
 
 To get a shell in your NixOS environment, use:
