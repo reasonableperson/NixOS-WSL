@@ -9,12 +9,15 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Build tarball builder 🛠️
-      id: buildBuilder
+    - name: Build tarball 🛠️
+      id: build
       uses: ./.github/actions/build-nix-expression
       with:
-        expression: '.#nixosConfigurations.${{ inputs.config }}.config.system.build.tarballBuilder'
+        expression: '.#nixosConfigurations.${{ inputs.config }}.config.system.build.tarball'
 
-    - name: Build tarball 📦
+    - name: Copy tarball 📦
       shell: bash
-      run: sudo ${{ steps.buildBuilder.outputs.derivation }}/bin/nixos-wsl-tarball-builder ${{ inputs.filename }}
+      env:
+        IMAGE: ${{ steps.build.outputs.derivation }}/tarball/nixos.wsl
+        FILENAME: ${{ inputs.filename }}
+      run: cp "$IMAGE" "$FILENAME"

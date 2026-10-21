@@ -7,9 +7,10 @@ This requires access to a system that already has Nix installed. Please refer to
 With flakes enabled, build a tarball without `sudo`:
 
 ```sh
-nixos-rebuild build-image --flake .#aarch64 --image-variant wsl
+nixos-rebuild build-image --flake .#aarch64 --image-variant wsl -L
 ```
 
+`-L` streams build logs, including staging, database initialization, and compression progress messages.
 Use `default` instead of `aarch64` for x86_64, or your own configuration name.
 The image is at `result/tarball/nixos.wsl` by default.
 You can also build it directly:
@@ -18,7 +19,9 @@ You can also build it directly:
 nix build .#nixosConfigurations.aarch64.config.system.build.images.wsl
 ```
 
-`system.build.tarball` remains an alias for the WSL image.
+`system.build.tarball` is an alias for the WSL image.
+The `wsl` image variant is registered by the NixOS-WSL module when `wsl.enable = true`.
+`--image-variant wsl` selects that registered variant; it does not import NixOS-WSL or convert an unrelated configuration into a WSL system.
 To customize its name or output path, extend the image variant in your configuration:
 
 ```nix
@@ -33,72 +36,9 @@ This path is experimental and should be tested with a fresh WSL import before re
 
 The image includes the Nix database, bootstrap users, WSL metadata, and the configuration selected by `wsl.tarball.configPath`.
 The default user must have a fixed UID and primary GID (as in the supplied configurations).
-Runtime `--extra-files` and `--chown` arguments are not supported by this builder; use the installation-based builder below if you need them.
 
-## Installation-based build
-
-If you have a flakes-enabled Nix, you can use the following command to build your own tarball instead of relying on a prebuilt one:
+Without flakes, build the same tarball with:
 
 ```sh
-sudo nix run github:nix-community/NixOS-WSL#nixosConfigurations.default.config.system.build.tarballBuilder
+nix-build -A nixosConfigurations.default.config.system.build.tarball
 ```
-
-Or, if you want to build with local changes, run inside your checkout:
-
-```sh
-sudo nix run .#nixosConfigurations.your-hostname.config.system.build.tarballBuilder
-```
-
-Without a flakes-enabled Nix, you can build a tarball using:
-
-```sh
-nix-build -A nixosConfigurations.default.config.system.build.tarballBuilder && sudo ./result/bin/nixos-wsl-tarball-builder
-```
-
-The resulting tarball can then be found under `nixos.wsl`.
-
-## Copying files to the new installation
-
-The tarball builder supports copying in extra files and fixing up ownership before the tarball is packed.
-
-### `--extra-files <path>`
-
-The `--extra-files <path>` option allows copying files into the target root after installation.
-
-The contents of `<path>` are recursively copied and overwrite the target\'s root (`/`). The structure and permissions of `<path>` should already match how you want them on the target.
-
-For example, if you want to copy your SSH host key, you can prepare a directory structure like this:
-
-```sh
-root=$(mktemp -d)
-sudo mkdir -p $root/etc/ssh
-sudo cp /etc/ssh/ssh_host_ed25519_key $root/etc/ssh
-```
-
-Then run:
-
-```sh
-sudo nix run github:nix-community/NixOS-WSL#nixosConfigurations.default.config.system.build.tarballBuilder -- --extra-files $root
-```
-
-By default, everything ends up owned by root.
-
-### `--chown <path> <uid:gid>`
-
-The `--chown` option allows adjusting ownership of directories or files inside the tarball after they\'re copied.
-
-For example:
-
-```sh
-sudo nix run github:nix-community/NixOS-WSL#nixosConfigurations.default.config.system.build.tarballBuilder -- \
-  --extra-files ./extra \
-  --chown /home/myuser 1000:100
-```
-
-This is equivalent to running inside the tarball root:
-
-```sh
-chown -R 1000:100 /home/myuser
-```
-
-The `--chown` option can be used multiple times to set ownership for different paths. Only use this when you can guarantee what the UID/GID will be on the target system.

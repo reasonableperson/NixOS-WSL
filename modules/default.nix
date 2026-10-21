@@ -1,11 +1,11 @@
 { lib, ... }: {
   imports = [
-    ./build-tarball.nix
     ./docker-desktop.nix
     ./interop.nix
     ./recovery.nix
     ./ssh-agent.nix
     ./systemd.nix
+    ./tarball.nix
     ./usbip.nix
     ./version.nix
     ./welcome.nix

@@ -83,7 +83,10 @@ in
         (pkgs.callPackage (modulesPath + "/../lib/make-system-tarball.nix") {
           fileName = config.image.baseName;
           compressionExtension = ".gz";
-          compressCommand = "pigz -n";
+          compressCommand = pkgs.writeShellScript "compress-wsl-tarball" ''
+            echo "[NixOS-WSL] Compressing filesystem archive..." >&2
+            exec pigz -n
+          '';
           extraInputs = [ pkgs.pigz ];
 
           storeContents = [{
@@ -100,6 +103,7 @@ in
 
           extraCommands = pkgs.writeShellScript "prepare-wsl-tarball" ''
             set -e
+            echo "[NixOS-WSL] Preparing bootstrap files and users..."
             mkdir -p bin sbin dev proc sys run tmp root etc/nixos nix/var/nix/gcroots
             chmod 1777 tmp
             chmod 0700 root
@@ -129,6 +133,7 @@ in
             chmod 0644 etc/passwd etc/group
 
             # The WSL shim bypasses stage 2, which normally loads nix-path-registration.
+            echo "[NixOS-WSL] Initializing the Nix database..."
             NIX_STATE_DIR="$PWD/nix/var/nix" ${config.nix.package}/bin/nix-store --load-db < nix-path-registration
             rm nix-path-registration
 
@@ -150,6 +155,7 @@ in
           '';
         }).overrideAttrs (old: {
           buildCommandPath = pkgs.writeText "build-wsl-image.sh" ''
+            echo "[NixOS-WSL] Staging filesystem and system closure ($(wc -l < "$closureInfo/store-paths") store paths)..."
             source ${old.buildCommandPath}
             sourceFile="$out/tarball/"${escapeShellArg "${config.image.baseName}.tar.gz"}
             targetFile="$out/"${escapeShellArg config.image.filePath}
@@ -158,129 +164,10 @@ in
               mv "$sourceFile" "$targetFile"
             fi
             echo "file system-tarball $targetFile" > "$out/nix-support/hydra-build-products"
+            echo "[NixOS-WSL] Image ready: $(du -h "$targetFile")"
           '';
         });
     };
 
-    system.build.tarballBuilder = pkgs.writeShellApplication {
-      name = "nixos-wsl-tarball-builder";
-
-      runtimeInputs = [
-        pkgs.coreutils
-        pkgs.e2fsprogs
-        pkgs.gnutar
-        pkgs.nixos-install-tools
-        pkgs.pigz
-        config.nix.package
-      ];
-
-      text = ''
-        usage() {
-          echo "Usage: $0 [--extra-files PATH] [--chown PATH UID:GID] [output.tar.gz]"
-          exit 1
-        }
-
-        if ! [ $EUID -eq 0 ]; then
-          echo "This script must be run as root!"
-          exit 1
-        fi
-
-        # Use .wsl extension to support double-click installs on recent versions of Windows
-        out="nixos.wsl"
-        extra_files=""
-
-        declare -A chowns=()
-        positionals=()
-
-        while [ $# -gt 0 ]; do
-          case "$1" in
-            --extra-files)
-              shift
-              extra_files="$1"
-              ;;
-            --chown)
-              shift
-              path="$1"
-              shift
-              perms="$1"
-              chowns["$path"]="$perms"
-              ;;
-            -*)
-              echo "Unknown option: $1"
-              usage
-              ;;
-            *)
-              positionals+=("$1")
-              ;;
-          esac
-          shift
-        done
-
-        if [ ''${#positionals[@]} -gt 1 ]; then
-          echo "Too many positional arguments: ''${positionals[*]}"
-          usage
-        fi
-
-        if [ ''${#positionals[@]} -gt 0 ]; then
-          out="''${positionals[0]}"
-        fi
-
-        root=$(mktemp -p "''${TMPDIR:-/tmp}" -d nixos-wsl-tarball.XXXXXXXXXX)
-        # FIXME: fails in CI for some reason, but we don't really care because it's CI
-        trap 'chattr -Rf -i "$root" || true && rm -rf "$root" || true' INT TERM EXIT
-
-        if [ -n "$extra_files" ]; then
-          if ! [ -d "$extra_files" ]; then
-            echo "The path passed to --extra-files must be a directory"
-            exit 1
-          fi
-
-          echo "[NixOS-WSL] Copying extra files to $root..."
-          cp --verbose --archive --no-preserve=ownership --no-target-directory "$extra_files" "$root"
-        fi
-
-        chmod o+rx "$root"
-
-        for path in "''${!chowns[@]}"; do
-          echo "[NixOS-WSL] Setting ownership for $path to ''${chowns[$path]}"
-          chown -R "''${chowns[$path]}" "$root/$path"
-        done
-
-        echo "[NixOS-WSL] Installing..."
-        nixos-install \
-          --root "$root" \
-          --no-root-passwd \
-          --system ${config.system.build.toplevel} \
-          --substituters ""
-
-        ${lib.optionalString config.nix.channel.enable ''
-          echo "[NixOS-WSL] Adding channel..."
-          nixos-enter --root "$root" --command 'HOME=/root nix-channel --add https://github.com/nix-community/NixOS-WSL/archive/refs/heads/${nixosWslBranch}.tar.gz nixos-wsl'
-        ''}
-
-        echo "[NixOS-WSL] Adding wsl-distribution.conf"
-        install -Dm644 ${wsl-distribution-conf} "$root/etc/wsl-distribution.conf"
-        install -Dm644 ${icon} "$root${iconPath}"
-
-        echo "[NixOS-WSL] Adding default config..."
-        ${if cfg.configPath == null then ''
-          install -Dm644 ${defaultConfig} "$root/etc/nixos/configuration.nix"
-        '' else ''
-          mkdir -p "$root/etc/nixos"
-          cp -R ${lib.cleanSource cfg.configPath}/. "$root/etc/nixos"
-          chmod -R u+w "$root/etc/nixos"
-        ''}
-
-        echo "[NixOS-WSL] Compressing..."
-        tar -C "$root" \
-          -c \
-          --sort=name \
-          --mtime='@1' \
-          --numeric-owner \
-          --hard-dereference \
-          . \
-        | pigz > "$out"
-      '';
-    };
   };
 }
