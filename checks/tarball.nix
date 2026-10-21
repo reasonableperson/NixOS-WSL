@@ -6,7 +6,7 @@
 , ...
 }:
 let
-  configuration = inputs.self.nixosConfigurations.${if system == "aarch64-linux" then "aarch64" else "default"};
+  configuration = inputs.self.nixosConfigurations.${system};
   image = (configuration.extendModules {
     modules = [{
       image.modules.wsl = {

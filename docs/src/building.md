@@ -7,16 +7,16 @@ This requires access to a system that already has Nix installed. Please refer to
 With flakes enabled, build a tarball without `sudo`:
 
 ```sh
-nixos-rebuild build-image --flake .#aarch64 --image-variant wsl -L
+nixos-rebuild build-image --flake .#aarch64-linux --image-variant wsl -L
 ```
 
 `-L` streams build logs, including staging, database initialization, and compression progress messages.
-Use `default` instead of `aarch64` for x86_64, or your own configuration name.
+Use `x86_64-linux` instead of `aarch64-linux` for x86_64, or your own configuration name.
 The image is at `result/tarball/nixos.wsl` by default.
 You can also build it directly:
 
 ```sh
-nix build .#nixosConfigurations.aarch64.config.system.build.images.wsl
+nix build .#nixosConfigurations.aarch64-linux.config.system.build.images.wsl
 ```
 
 `system.build.tarball` is an alias for the WSL image.
@@ -40,5 +40,5 @@ The default user must have a fixed UID and primary GID (as in the supplied confi
 Without flakes, build the same tarball with:
 
 ```sh
-nix-build -A nixosConfigurations.default.config.system.build.tarball
+nix-build -A nixosConfigurations.x86_64-linux.config.system.build.tarball
 ```
