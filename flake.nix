@@ -24,7 +24,7 @@
     in
     {
       nixosModules.wsl = {
-        image.modules.wsl = ./modules/build-tarball.nix;
+        image.modules.wsl = ./modules/image.nix;
 
         imports = [
           ./modules
@@ -41,7 +41,7 @@
         modules = [
           self.nixosModules.default
           ({ config, lib, pkgs, ... }: {
-            # This config is only used until the first nixos-rebuild. For the config installed to /etc/nixos/configuration.nix, see modules/build-tarball.nix
+            # This config is only used until the first nixos-rebuild. For the config installed to /etc/nixos/configuration.nix, see modules/image.nix
 
             wsl.enable = true;
 
