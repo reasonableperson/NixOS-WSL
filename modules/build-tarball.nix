@@ -62,20 +62,18 @@ in
     };
   };
 
-  # These options make no sense without the wsl-distro module anyway
-  config = mkIf config.wsl.enable {
-    system.build.tarball = mkDefault config.system.build.images.wsl;
-
+  config = {
     image.modules.wsl = { config, ... }: {
       imports = [ (modulesPath + "/image/file-options.nix") ];
+
+      wsl.enable = true;
 
       image = {
         baseName = mkDefault "nixos";
         extension = mkDefault "wsl";
         filePath = mkDefault "tarball/${config.image.fileName}";
       };
-      system.build.image = config.system.build.tarball;
-      system.build.tarball =
+      system.build.image =
         assert lib.assertMsg
           (config.users.users.${config.wsl.defaultUser}.uid != null
             && config.users.groups.${config.users.users.${config.wsl.defaultUser}.group}.gid != null)

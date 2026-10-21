@@ -13,7 +13,7 @@ runs:
       id: build
       uses: ./.github/actions/build-nix-expression
       with:
-        expression: '.#nixosConfigurations.${{ inputs.config }}.config.system.build.tarball'
+        expression: '.#nixosConfigurations.${{ inputs.config }}.config.system.build.images.wsl'
 
     - name: Copy tarball 📦
       shell: bash

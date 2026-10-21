@@ -19,9 +19,9 @@ You can also build it directly:
 nix build .#nixosConfigurations.aarch64-linux.config.system.build.images.wsl
 ```
 
-`system.build.tarball` is an alias for the WSL image.
-The `wsl` image variant is registered by the NixOS-WSL module when `wsl.enable = true`.
-`--image-variant wsl` selects that registered variant; it does not import NixOS-WSL or convert an unrelated configuration into a WSL system.
+Importing the NixOS-WSL module registers the `wsl` image variant.
+Selecting it enables WSL in the image configuration, without enabling it in the original system configuration.
+`--image-variant wsl` does not import NixOS-WSL automatically; the target configuration must already import the module.
 To customize its name or output path, extend the image variant in your configuration:
 
 ```nix
@@ -40,5 +40,5 @@ The default user must have a fixed UID and primary GID (as in the supplied confi
 Without flakes, build the same tarball with:
 
 ```sh
-nix-build -A nixosConfigurations.x86_64-linux.config.system.build.tarball
+nix-build -A nixosConfigurations.x86_64-linux.config.system.build.images.wsl
 ```

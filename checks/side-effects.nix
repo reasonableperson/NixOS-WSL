@@ -29,6 +29,8 @@ let
     ];
   };
 in
+assert !wslModuleConfig.config.wsl.enable;
+assert wslModuleConfig.config.system.build.images.wsl.passthru.config.wsl.enable;
 # Check that both configs evaluate to the same derivation
 if cleanConfig.config.system.build.toplevel.outPath == wslModuleConfig.config.system.build.toplevel.outPath
 then emptyFile
