@@ -100,7 +100,6 @@ in
         mkdir -p bin sbin dev proc sys run tmp root etc/nixos nix/var/nix/gcroots
         chmod 1777 tmp
         chmod 0700 root
-        touch etc/NIXOS
         ln -s ${config.system.build.nativeUtils}/bin/systemd-shim sbin/init
         ln -s ${config.wsl.binShExe} bin/sh
         ${concatMapStrings (entry:

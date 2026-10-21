@@ -45,7 +45,7 @@ runCommand "check-wsl-tarball" { nativeBuildInputs = [ python3 ]; } ''
   import tarfile
 
   required = {
-      "etc/passwd", "etc/group", "etc/NIXOS", "etc/wsl.conf",
+      "etc/passwd", "etc/group", "etc/wsl.conf",
       "etc/wsl-distribution.conf", "etc/nixos.ico", "etc/os-release",
       "etc/nixos/configuration.nix", "root/.nix-channels",
       "root/.nix-defexpr/channels", "sbin/init", "bin/sh",
