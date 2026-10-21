@@ -18,6 +18,6 @@ runs:
     - name: Copy tarball 📦
       shell: bash
       env:
-        IMAGE: ${{ steps.build.outputs.derivation }}/tarball/nixos.wsl
+        IMAGE: ${{ steps.build.outputs.derivation }}/nixos.wsl
         FILENAME: ${{ inputs.filename }}
       run: cp "$IMAGE" "$FILENAME"

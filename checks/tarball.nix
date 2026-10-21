@@ -10,14 +10,14 @@ let
   image = (configuration.extendModules {
     modules = [{
       image.modules.wsl = {
-        image.baseName = "test-wsl";
-        image.filePath = "images/test-wsl.wsl";
+        image.fileName = "test-wsl.wsl";
       };
     }];
   }).config.system.build.images.wsl;
   inherit (image.passthru) config;
   closure = closureInfo { rootPaths = [ config.system.build.toplevel ]; };
 in
+assert image.passthru.filePath == "test-wsl.wsl";
 runCommand "check-wsl-tarball" { nativeBuildInputs = [ python3 ]; } ''
   python3 <<'PY'
   import pathlib

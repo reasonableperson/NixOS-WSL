@@ -24,6 +24,8 @@
     in
     {
       nixosModules.wsl = {
+        image.modules.wsl = ./modules/build-tarball.nix;
+
         imports = [
           ./modules
 

@@ -42,6 +42,13 @@ in
 {
   options.wsl = with types; {
     enable = mkEnableOption "support for running NixOS as a WSL distribution";
+
+    tarball.configPath = mkOption {
+      type = nullOr path;
+      default = null;
+      description = "Path to system configuration which is copied into the tarball";
+    };
+
     useWindowsDriver = mkEnableOption "OpenGL driver from the Windows host";
 
     wslLibExtraLinks = mkOption {

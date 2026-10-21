@@ -12,24 +12,23 @@ nixos-rebuild build-image --flake .#aarch64-linux --image-variant wsl -L
 
 `-L` streams build logs, including staging, database initialization, and compression progress messages.
 Use `x86_64-linux` instead of `aarch64-linux` for x86_64, or your own configuration name.
-The image is at `result/tarball/nixos.wsl` by default.
+The image is at `result/nixos.wsl` by default.
 You can also build it directly:
 
 ```sh
 nix build .#nixosConfigurations.aarch64-linux.config.system.build.images.wsl
 ```
 
-Importing the NixOS-WSL module registers the `wsl` image variant.
+Importing the flake's exported NixOS-WSL module registers the `wsl` image variant.
 Selecting it enables WSL in the image configuration, without enabling it in the original system configuration.
 `--image-variant wsl` does not import NixOS-WSL automatically; the target configuration must already import the module.
-To customize its name or output path, extend the image variant in your configuration:
+To customize its filename, extend the image variant in your configuration:
 
 ```nix
-image.modules.wsl = {
-  image.baseName = "my-nixos";
-  image.filePath = "images/my-nixos.wsl";
-};
+image.modules.wsl.image.fileName = "my-nixos.wsl";
 ```
+
+This produces `result/my-nixos.wsl`.
 
 The build runs in the Nix sandbox; the WSL shim activates the system on first boot.
 This path is experimental and should be tested with a fresh WSL import before replacing an existing installation.
