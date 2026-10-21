@@ -98,8 +98,8 @@ in
         ln -s system-1-link nix/var/nix/profiles/system
         ln -s /nix/var/nix/profiles/system nix/var/nix/gcroots/system
 
-        # WSL resolves users before the shim runs activation. Allocate IDs now;
-        # activation preserves them and applies passwords and wrapped shells.
+        # Generate /etc/passwd and /etc/group at build time so WSL can resolve
+        # users without waiting for activation to apply passwords and wrapped shells.
         bootstrapUsers="$(mktemp -d)"
         ${pkgs.buildPackages.userborn}/bin/userborn ${pkgs.writeText "bootstrap-users.json" (toJSON {
           users = mapAttrsToList (_: user: {
