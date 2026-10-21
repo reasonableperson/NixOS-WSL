@@ -75,13 +75,12 @@ runCommand "check-wsl-tarball" { nativeBuildInputs = [ python3 ]; } ''
   assert b"<nixos-wsl/modules>" in files["etc/nixos/configuration.nix"]
   assert b"nixos-wsl" in files["root/.nix-channels"]
   users = {line.split(":")[0]: line.split(":") for line in files["etc/passwd"].decode().splitlines()}
-  assert users["root"][2:4] == ["0", "0"]
   groups = {line.split(":")[0]: line.split(":") for line in files["etc/group"].decode().splitlines()}
   default_user = users["${config.users.users.${config.wsl.defaultUser}.name}"]
   assert default_user[2:4] == ["1234", "4321"]
   assert groups["bootstrap"][2] == "4321"
-  assert set(users) == {"root", "image-user"}
-  assert set(groups) == {"root", "bootstrap"}
+  assert set(users) == {"image-user"}
+  assert set(groups) == {"bootstrap"}
 
   pathlib.Path("db.sqlite").write_bytes(files["nix/var/nix/db/db.sqlite"])
   with sqlite3.connect("db.sqlite") as db:

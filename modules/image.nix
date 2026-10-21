@@ -87,7 +87,7 @@ in
 
       extraCommands =
         let
-          imageUsers = [ config.users.users.root config.users.users.${config.wsl.defaultUser} ];
+          group = config.users.groups.${defaultUser.group};
         in
         pkgs.writeShellScript "prepare-wsl-tarball" ''
           set -e
@@ -108,14 +108,13 @@ in
           ln -s /nix/var/nix/profiles/system nix/var/nix/gcroots/system
 
           # WSL resolves the default user before starting /sbin/init.
-          # Seed root and the default user; activation configures the remaining users.
-          cp ${pkgs.writeText "bootstrap-passwd" (concatMapStrings (user:
-            "${user.name}:x:${toString user.uid}:${toString config.users.groups.${user.group}.gid}:${user.description}:${user.home}:${utils.toShellPath user.shell}\n"
-          ) imageUsers)} etc/passwd
-          cp ${pkgs.writeText "bootstrap-group" (concatMapStrings (name:
-            let group = config.users.groups.${name}; in
-            "${group.name}:x:${toString group.gid}:${concatStringsSep "," (intersectLists (map (user: user.name) imageUsers) group.members)}\n"
-          ) (unique (map (user: user.group) imageUsers)))} etc/group
+          # Seed the default user; activation configures the remaining users.
+          cp ${pkgs.writeText "bootstrap-passwd"
+            "${defaultUser.name}:x:${toString defaultUser.uid}:${toString group.gid}:${defaultUser.description}:${defaultUser.home}:${utils.toShellPath defaultUser.shell}\n"
+          } etc/passwd
+          cp ${pkgs.writeText "bootstrap-group"
+            "${group.name}:x:${toString group.gid}:${defaultUser.name}\n"
+          } etc/group
           chmod 0644 etc/passwd etc/group
 
           # The WSL shim bypasses stage 2, which normally loads nix-path-registration.
