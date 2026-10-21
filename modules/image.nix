@@ -6,20 +6,6 @@ let
   icon = ../assets/NixOS-WSL.ico;
   iconPath = "/etc/nixos.ico";
 
-  bootstrapUsers = pkgs.runCommand "wsl-bootstrap-users" { } ''
-    mkdir -p $out
-    ${pkgs.buildPackages.userborn}/bin/userborn ${pkgs.writeText "bootstrap-users.json" (toJSON {
-      users = mapAttrsToList (_: user: {
-        inherit (user) name uid group description home;
-        isNormal = user.isNormalUser;
-        shell = utils.toShellPath user.shell;
-      }) (filterAttrs (_: user: user.enable) config.users.users);
-      groups = mapAttrsToList (_: group: {
-        inherit (group) name gid members;
-      }) config.users.groups;
-    })} $out
-  '';
-
   wsl-distribution-conf = pkgs.writeText "wsl-distribution.conf" (
     generators.toINI { } {
       oobe.defaultName = "NixOS";
@@ -114,8 +100,20 @@ in
 
         # WSL resolves users before the shim runs activation. Allocate IDs now;
         # activation preserves them and applies passwords and wrapped shells.
-        cp ${bootstrapUsers}/passwd etc/passwd
-        cp ${bootstrapUsers}/group etc/group
+        bootstrapUsers="$(mktemp -d)"
+        ${pkgs.buildPackages.userborn}/bin/userborn ${pkgs.writeText "bootstrap-users.json" (toJSON {
+          users = mapAttrsToList (_: user: {
+            inherit (user) name uid group description home;
+            isNormal = user.isNormalUser;
+            shell = utils.toShellPath user.shell;
+          }) (filterAttrs (_: user: user.enable) config.users.users);
+          groups = mapAttrsToList (_: group: {
+            inherit (group) name gid members;
+          }) config.users.groups;
+        })} "$bootstrapUsers"
+        mv "$bootstrapUsers/passwd" etc/passwd
+        mv "$bootstrapUsers/group" etc/group
+        rm -r "$bootstrapUsers"
         chmod 0644 etc/passwd etc/group
 
         # The WSL shim bypasses stage 2, which normally loads nix-path-registration.
