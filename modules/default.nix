@@ -5,7 +5,7 @@
     ./interop.nix
     ./recovery.nix
     ./ssh-agent.nix
-    ./systemd
+    ./systemd.nix
     ./usbip.nix
     ./version.nix
     ./welcome.nix
