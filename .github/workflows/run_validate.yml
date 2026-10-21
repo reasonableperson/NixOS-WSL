@@ -12,10 +12,8 @@ jobs:
         include:
           - system: x86_64
             artifact: tarball-x86_64
-            filename: nixos.wsl
           - system: aarch64
             artifact: tarball-aarch64
-            filename: nixos.aarch64.wsl
     steps:
       - name: Checkout WSL Repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,4 +34,4 @@ jobs:
       - name: Validate Tarball 🩺
         shell: bash
         run: |
-          python3 distributions/validate-modern.py --tar ${{ matrix.filename }}
+          python3 distributions/validate-modern.py --tar nixos.wsl

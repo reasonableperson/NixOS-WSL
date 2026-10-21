@@ -13,11 +13,9 @@ jobs:
           - runner: ubuntu-24.04
             system: x86_64
             config: x86_64-linux
-            filename: nixos.wsl
           - runner: ubuntu-24.04-arm
             system: aarch64
             config: aarch64-linux
-            filename: nixos.aarch64.wsl
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,13 +33,13 @@ jobs:
         run: echo '## NixOS-WSL ${{ steps.version.outputs.version }}' >> $GITHUB_STEP_SUMMARY
 
       - name: Build Tarball 🛠️
-        uses: ./.github/actions/build-wsl-tarball
+        id: build
+        uses: ./.github/actions/build-nix-expression
         with:
-          config: ${{ matrix.config }}
-          filename: ${{ matrix.filename }}
+          expression: '.#nixosConfigurations.${{ matrix.config }}.config.system.build.images.wsl'
 
       - name: Upload Tarball 📤
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: tarball-${{ matrix.system }}
-          path: ${{ matrix.filename }}
+          path: ${{ steps.build.outputs.derivation }}/nixos.wsl
